@@ -134,5 +134,6 @@
 
 
 В PlantUML накидала диаграмму
+
 <img width="494" height="449" alt="Снимок экрана 2026-06-25 в 21 26 53" src="https://github.com/user-attachments/assets/2b2c0f88-8986-4095-a641-07b55960ace1" />
 
