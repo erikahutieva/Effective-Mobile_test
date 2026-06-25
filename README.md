@@ -2,6 +2,8 @@
 
 <img width="1231" height="909" alt="test_ex1 drawio" src="https://github.com/user-attachments/assets/6f2f9e89-a348-4d91-af7d-c7fcad37e06a" />
 
+
+
 # Задание 2
 
 # User Story
@@ -143,3 +145,6 @@
 
 <img width="494" height="449" alt="Снимок экрана 2026-06-25 в 21 26 53" src="https://github.com/user-attachments/assets/2b2c0f88-8986-4095-a641-07b55960ace1" />
 
+
+
+# Задание 3
