@@ -148,3 +148,313 @@
 
 
 # Задание 3
+
+# Задание 3.1 REST API
+
+## Описание
+
+
+## HTTP-метод и URL
+
+```http
+POST /api/v1/users/register
+Content-Type: application/json
+```
+
+
+
+## Входные параметры (тело запроса)
+
+| Поле              | Тип    | Обязательность | Ограничения                                                                          |
+| ----------------- | ------ | -------------- | ------------------------------------------------------------------------------------ |
+| `first_name`      | string | Да             | 1–100 символов                                                                       |
+| `last_name`       | string | Да             | 1–100 символов                                                                       |
+| `username`        | string | Да             | 3–50 символов, только `[a-zA-Z0-9_]`                                                 |
+| `password`        | string | Да             | 8–128 символов, содержит заглавную букву, строчную букву, цифру и специальный символ |
+| `recaptcha_token` | string | Да             | Токен `g-recaptcha-response`, полученный от Google reCAPTCHA                         |
+
+
+
+## Выходные параметры (успешный ответ, HTTP 201)
+
+| Поле         | Тип               | Обязательность | Описание                              |
+| ------------ | ----------------- | -------------- | ------------------------------------- |
+| `user_id`    | UUID              | Да             | Уникальный идентификатор пользователя |
+| `username`   | string            | Да             | Логин пользователя                    |
+| `first_name` | string            | Да             | Имя                                   |
+| `last_name`  | string            | Да             | Фамилия                               |
+| `created_at` | string (ISO 8601) | Да             | Дата и время регистрации (UTC)        |
+| `message`    | string            | Да             | `User registered successfully`        |
+
+
+
+## Выходные параметры (ответ с ошибкой)
+
+| Поле                | Тип           | Обязательность | Описание                                             |
+| ------------------- | ------------- | -------------- | ---------------------------------------------------- |
+| `error_code`        | string (enum) | Да             | Машиночитаемый код ошибки                            |
+| `message`           | string        | Да             | Сообщение об ошибке                                  |
+| `details`           | array         | Да             | Список ошибок по отдельным полям (может быть пустым) |
+| `details[].field`   | string        | Нет            | Название поля                                        |
+| `details[].message` | string        | Нет            | Описание ошибки                                      |
+
+
+
+## Описание кодов ошибок
+
+| HTTP    | `error_code`            | Тип        | Описание                                                                                          |
+| ------- | ----------------------- | ---------- | ------------------------------------------------------------------------------------------------- |
+| **400** | `VALIDATION_ERROR`      | Клиентская | Ошибка валидации входных данных. Для пароля используется текст ошибки, совпадающий с интерфейсом. |
+| **400** | `RECAPTCHA_FAILED`      | Клиентская | `Please verify reCaptcha to register`                                                             |
+| **409** | `USER_ALREADY_EXISTS`   | Клиентская | `User existed`                                                                                    |
+| **500** | `INTERNAL_SERVER_ERROR` | Серверная  | `An unexpected error occurred. Please try again later.`                                           |
+
+
+
+## Пример запроса
+
+```http
+POST /api/v1/users/register
+Content-Type: application/json
+```
+
+```json
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "username": "john_doe",
+  "password": "Str0ng!Pass",
+  "recaptcha_token": "03AGdBq26xyzABC..."
+}
+```
+
+
+## Успешный ответ (201)
+
+```json
+{
+  "user_id": "a3f5c812-7b2e-4d91-9c4a-001e2d3f4a5b",
+  "username": "john_doe",
+  "first_name": "John",
+  "last_name": "Doe",
+  "created_at": "2026-06-26T10:00:00Z",
+  "message": "User registered successfully"
+}
+```
+
+
+
+## Ответ при слабом пароле (400)
+
+```json
+{
+  "error_code": "VALIDATION_ERROR",
+  "message": "Validation failed",
+  "details": [
+    {
+      "field": "password",
+      "message": "Password must be at least 8 characters long and contain uppercase, lowercase, digit and special character"
+    }
+  ]
+}
+```
+
+
+
+## Ответ при существующем пользователе (409)
+
+```json
+{
+  "error_code": "USER_ALREADY_EXISTS",
+  "message": "User existed",
+  "details": []
+}
+```
+
+
+
+## Ответ при непрохождении reCAPTCHA (400)
+
+```json
+{
+  "error_code": "RECAPTCHA_FAILED",
+  "message": "Please verify reCaptcha to register",
+  "details": []
+}
+```
+
+
+
+# Задание 3.2 — Алгоритм создания пользователя на бэкенде
+
+
+### Шаг 1. Разбор тела запроса
+
+Получить HTTP-запрос и десериализовать входящий JSON. Если тело запроса не является корректным JSON, вернуть:
+
+* HTTP **400 Bad Request**.
+
+
+### Шаг 2. Проверка обязательных полей
+
+Проверить наличие следующих полей:
+
+* `first_name`
+* `last_name`
+* `username`
+* `password`
+* `recaptcha_token`
+
+Если хотя бы одно поле отсутствует или пустое — вернуть:
+
+* HTTP **400**
+* `VALIDATION_ERROR`
+
+с указанием ошибок в массиве `details`.
+
+
+### Шаг 3. Валидация форматов
+
+Проверить:
+
+* `username` — длина 3–50 символов;
+* допустимые символы — только `[a-zA-Z0-9_]`;
+* `first_name` и `last_name` — длина от 1 до 100 символов.
+
+При нарушении вернуть:
+
+* HTTP **400**
+* `VALIDATION_ERROR`.
+
+
+
+### Шаг 4. Проверка сложности пароля
+
+Проверить пароль по правилам:
+
+* минимум 8 символов;
+* минимум одна заглавная буква;
+* минимум одна строчная буква;
+* минимум одна цифра;
+* минимум один специальный символ.
+
+При несоответствии вернуть:
+
+* HTTP **400**
+* `VALIDATION_ERROR`
+
+с сообщением, совпадающим с текстом ошибки в пользовательском интерфейсе.
+
+
+
+### Шаг 5. Проверка Google reCAPTCHA
+
+Отправить POST-запрос на сервис Google:
+
+```
+https://www.google.com/recaptcha/api/siteverify
+```
+
+Передать:
+
+* секретный ключ сервера;
+* `recaptcha_token`.
+
+Если Google возвращает:
+
+```json
+{
+  "success": false
+}
+```
+
+вернуть:
+
+* HTTP **400**
+* `RECAPTCHA_FAILED`.
+
+
+
+### Шаг 6. Проверка уникальности пользователя
+
+Выполнить запрос к базе данных:
+
+```sql
+SELECT * FROM users
+WHERE username = :username;
+```
+
+Если пользователь найден:
+
+* HTTP **409 Conflict**
+* `USER_ALREADY_EXISTS`
+* сообщение `User existed`.
+
+
+### Шаг 7. Хеширование пароля
+
+Перед сохранением сформировать криптографический хеш пароля с использованием алгоритма:
+
+* **bcrypt**
+
+В базе данных хранится только хеш пароля. Исходный пароль никогда не сохраняется.
+
+
+### Шаг 8. Сохранение пользователя
+
+В рамках транзакции выполнить вставку записи:
+
+```sql
+INSERT INTO users
+(
+    first_name,
+    last_name,
+    username,
+    password_hash,
+    created_at
+)
+VALUES (...);
+```
+
+Во время сохранения:
+
+* генерируется `UUID`;
+* фиксируется время создания пользователя (`created_at`).
+
+
+### Шаг 9. Обработка ошибок базы данных
+
+Если при выполнении транзакции возникла ошибка (например:
+
+* недоступность БД;
+* таймаут;
+* нарушение уникального индекса;
+* race condition),
+
+необходимо выполнить откат транзакции и вернуть:
+
+```text
+HTTP 500 Internal Server Error
+```
+
+с кодом
+
+```text
+INTERNAL_SERVER_ERROR
+```
+
+
+### Шаг 10. Формирование успешного ответа
+
+При успешном завершении регистрации вернуть:
+
+* HTTP **201 Created**
+
+с телом ответа:
+
+* `user_id`
+* `username`
+* `first_name`
+* `last_name`
+* `created_at`
+* `message = "User registered successfully"`
