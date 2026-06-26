@@ -460,5 +460,6 @@ INTERNAL_SERVER_ERROR
 * `message = "User registered successfully"`
 
 # Описание в виде диаграммы:
-<img width="2624" height="6097" alt="user_registration_backend_algorithm" src="https://github.com/user-attachments/assets/c4ab585f-5976-4d56-b03a-3415fedf4ad9" />
+<img width="2624" height="6097" alt="user_registration_backend_algorithm" src="https://github.com/user-attachments/assets/ec44b156-dd84-4fc6-9961-522e3644fc6f" />
+
 
