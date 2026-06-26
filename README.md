@@ -458,3 +458,6 @@ INTERNAL_SERVER_ERROR
 * `last_name`
 * `created_at`
 * `message = "User registered successfully"`
+
+Описание в виде диаграммы:
+<img width="2624" height="6097" alt="user_registration_backend_algorithm" src="https://github.com/user-attachments/assets/ba809803-e6e0-4b8d-80db-562a97d6bffb" />
