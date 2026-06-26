@@ -283,7 +283,226 @@ Content-Type: application/json
 }
 ```
 
+# Описание в формате openAPI
 
+```
+openapi: 3.0.0
+info:
+  title: User Registration API
+  version: 1.0.0
+  description: API для регистрации пользователей с валидацией и проверкой reCAPTCHA
+
+paths:
+  /api/v1/users/register:
+    post:
+      summary: Регистрация нового пользователя
+      description: Создаёт новую учётную запись пользователя с валидацией, проверкой сложности пароля и верификацией reCAPTCHA
+      operationId: registerUser
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrationRequest'
+            examples:
+              validRequest:
+                summary: Пример корректного запроса на регистрацию
+                value:
+                  first_name: "John"
+                  last_name: "Doe"
+                  username: "john_doe"
+                  password: "Str0ng!Pass"
+                  recaptcha_token: "03AGdBq26xyzABC..."
+      responses:
+        '201':
+          description: Пользователь успешно зарегистрирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationResponse'
+              example:
+                user_id: "a3f5c812-7b2e-4d91-9c4a-001e2d3f4a5b"
+                username: "john_doe"
+                first_name: "John"
+                last_name: "Doe"
+                created_at: "2026-06-26T10:00:00Z"
+                message: "User registered successfully"
+        '400':
+          description: Неверный запрос - ошибка валидации или ошибка reCAPTCHA
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validationError:
+                  summary: Ошибка валидации пароля
+                  value:
+                    error_code: "VALIDATION_ERROR"
+                    message: "Validation failed"
+                    details:
+                      - field: "password"
+                        message: "Password must be at least 8 characters long and contain uppercase, lowercase, digit and special character"
+                recaptchaError:
+                  summary: Ошибка верификации reCAPTCHA
+                  value:
+                    error_code: "RECAPTCHA_FAILED"
+                    message: "Please verify reCaptcha to register"
+                    details: []
+        '409':
+          description: Конфликт - пользователь уже существует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error_code: "USER_ALREADY_EXISTS"
+                message: "User existed"
+                details: []
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error_code: "INTERNAL_SERVER_ERROR"
+                message: "An unexpected error occurred. Please try again later."
+                details: []
+
+components:
+  schemas:
+    RegistrationRequest:
+      type: object
+      required:
+        - first_name
+        - last_name
+        - username
+        - password
+        - recaptcha_token
+      properties:
+        first_name:
+          type: string
+          description: Имя пользователя
+          minLength: 1
+          maxLength: 100
+          example: "John"
+        last_name:
+          type: string
+          description: Фамилия пользователя
+          minLength: 1
+          maxLength: 100
+          example: "Doe"
+        username:
+          type: string
+          description: Уникальное имя пользователя (логин)
+          pattern: '^[a-zA-Z0-9_]+$'
+          minLength: 3
+          maxLength: 50
+          example: "john_doe"
+        password:
+          type: string
+          description: |
+            Пароль должен содержать от 8 до 128 символов и включать:
+            - Как минимум одну заглавную букву
+            - Как минимум одну строчную букву
+            - Как минимум одну цифру
+            - Как минимум один специальный символ
+          minLength: 8
+          maxLength: 128
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).+$'
+          example: "Str0ng!Pass"
+        recaptcha_token:
+          type: string
+          description: Токен Google reCAPTCHA (g-recaptcha-response)
+          example: "03AGdBq26xyzABC..."
+
+    RegistrationResponse:
+      type: object
+      required:
+        - user_id
+        - username
+        - first_name
+        - last_name
+        - created_at
+        - message
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя
+          example: "a3f5c812-7b2e-4d91-9c4a-001e2d3f4a5b"
+        username:
+          type: string
+          description: Логин пользователя
+          example: "john_doe"
+        first_name:
+          type: string
+          description: Имя пользователя
+          example: "John"
+        last_name:
+          type: string
+          description: Фамилия пользователя
+          example: "Doe"
+        created_at:
+          type: string
+          format: date-time
+          description: Дата и время регистрации (UTC)
+          example: "2026-06-26T10:00:00Z"
+        message:
+          type: string
+          description: Сообщение об успешной регистрации
+          example: "User registered successfully"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error_code
+        - message
+        - details
+      properties:
+        error_code:
+          type: string
+          description: Машиночитаемый код ошибки
+          enum:
+            - VALIDATION_ERROR
+            - RECAPTCHA_FAILED
+            - USER_ALREADY_EXISTS
+            - INTERNAL_SERVER_ERROR
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Сообщение об ошибке
+          example: "Validation failed"
+        details:
+          type: array
+          description: Список ошибок по отдельным полям (может быть пустым)
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+          example: []
+
+    ErrorDetail:
+      type: object
+      properties:
+        field:
+          type: string
+          description: Название поля
+          example: "password"
+        message:
+          type: string
+          description: Описание ошибки
+          example: "Password must be at least 8 characters long and contain uppercase, lowercase, digit and special character"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security: []
+
+```
 
 # Задание 3.2 — Алгоритм создания пользователя на бэкенде
 
